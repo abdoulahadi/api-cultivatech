@@ -3,10 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from PIL import Image
 from io import BytesIO
-from fastapi.responses import FileResponse
-from datetime import datetime
-import os
-import uuid
+import base64
 
 app = FastAPI()
 
@@ -15,12 +12,6 @@ def calculate_ndvi(red_band, nir_band):
     nir_band[nir_band == 0] = np.nan
     ndvi = (nir_band - red_band) / (nir_band + red_band)
     return ndvi
-
-def save_image_to_disk(image_bytes):
-    unique_filename = f"img/{datetime.now().strftime('%Y%m%d%H%M%S')}_{uuid.uuid4().hex}.png"
-    with open(unique_filename, "wb") as f:
-        f.write(image_bytes)
-    return unique_filename
 
 @app.post("/process-image/")
 async def process_image(image: UploadFile, recipient_email: str = None):
@@ -40,7 +31,7 @@ async def process_image(image: UploadFile, recipient_email: str = None):
     buf.seek(0)
     plt.close()
 
-    # Save image to disk
-    filename = save_image_to_disk(buf.getvalue())
+    # Encode image to base64
+    image_base64 = base64.b64encode(buf.getvalue()).decode()
 
-    return {"image": f"https://web-production-8333.up.railway.app/{filename}"}
+    return {"image_base64": image_base64}
